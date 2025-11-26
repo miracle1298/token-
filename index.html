@@ -34,10 +34,13 @@
       const [launchedToken, setLaunchedToken] = useState(null);
       const [tokens, setTokens] = useState([]);
       const [stats, setStats] = useState({});
+      const [basescanKey, setBasescanKey] = useState('');
       useEffect(() => {
         try {
           const raw = localStorage.getItem('launchedTokens');
           if (raw) setTokens(JSON.parse(raw));
+          const k = localStorage.getItem('basescanKey');
+          if (k) setBasescanKey(k);
         } catch {}
       }, []);
       useEffect(() => {
@@ -45,6 +48,11 @@
           localStorage.setItem('launchedTokens', JSON.stringify(tokens));
         } catch {}
       }, [tokens]);
+      useEffect(() => {
+        try {
+          localStorage.setItem('basescanKey', basescanKey);
+        } catch {}
+      }, [basescanKey]);
 
       useEffect(() => {
         async function load() {
@@ -66,6 +74,20 @@
                   url: best.url ?? null,
                   chainId: best.chainId ?? 'base'
                 }}));
+                if (basescanKey && basescanKey.length) {
+                  try {
+                    const info = await fetch(`https://api.basescan.org/api?module=token&action=tokeninfo&contractaddress=${addr}&apikey=${basescanKey}`);
+                    const infoJson = await info.json();
+                    const r = Array.isArray(infoJson?.result) ? infoJson.result[0] : null;
+                    const holders = r && (r.holders || r.holderCount || r.TokenHoldersCount);
+                    const supply = r && (r.totalSupply || r.TotalSupply);
+                    setStats(prev => ({...prev, [addr]: {
+                      ...(prev[addr]||{}),
+                      holders: holders ? parseInt(holders) : null,
+                      supply: supply ? supply : null
+                    }}));
+                  } catch {}
+                }
               } else {
                 setStats(prev => ({...prev, [addr]: {}}));
               }
@@ -75,8 +97,12 @@
           });
           await Promise.all(tasks);
         }
-        if (step === 'dashboard') load();
-      }, [step, tokens]);
+        if (step === 'dashboard') {
+          load();
+          const id = setInterval(load, 30000);
+          return () => clearInterval(id);
+        }
+      }, [step, tokens, basescanKey]);
       const handleImageUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -208,6 +234,10 @@
                   <button onClick={() => { setTokens([]); localStorage.removeItem('launchedTokens'); }} className="px-4 py-2 bg-white border-2 border-red-200 text-red-600 rounded-xl hover:border-red-300 transition-all">Clear All</button>
                 </div>
               </div>
+              <div className="flex items-center gap-2 mb-4">
+                <input value={basescanKey} onChange={(e)=>setBasescanKey(e.target.value)} type="text" placeholder="BaseScan API Key (optional)" className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors text-gray-800" />
+                <span className="text-xs text-gray-500">Add key to show holders and supply</span>
+              </div>
               <div className="flex items-center gap-2 mb-6">
                 <input id="add-address-input" type="text" placeholder="0x... contract address" className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors text-gray-800" />
                 <button onClick={addByAddress} className="px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl">Add</button>
@@ -229,14 +259,19 @@
                           <div className="text-purple-600 font-bold">${t.ticker}</div>
                         </div>
                       </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between"><span className="text-gray-600">Contract</span><span className="text-gray-800 font-mono text-xs">{t.address.slice(0,8)}...{t.address.slice(-6)}</span></div>
-                          <div className="flex justify-between"><span className="text-gray-600">Market Cap</span><span className="text-green-600 font-bold">${t.marketCap.toLocaleString()}</span></div>
-                          <div className="flex justify-between"><span className="text-gray-600">Price</span><span className="text-gray-800 font-bold">{stats[t.address]?.priceUsd ? `$${stats[t.address].priceUsd.toFixed(6)}` : '—'}</span></div>
-                          <div className="flex justify-between"><span className="text-gray-600">Liquidity</span><span className="text-gray-800">{stats[t.address]?.liquidityUsd ? `$${Math.round(stats[t.address].liquidityUsd).toLocaleString()}` : '—'}</span></div>
-                          <div className="flex justify-between"><span className="text-gray-600">FDV</span><span className="text-gray-800">{stats[t.address]?.fdv ? `$${Math.round(stats[t.address].fdv).toLocaleString()}` : '—'}</span></div>
-                          <div className="flex justify-between"><span className="text-gray-600">Network</span><span className="text-gray-800">{stats[t.address]?.chainId ? stats[t.address].chainId : '—'}</span></div>
-                        </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-gray-600">Contract</span><span className="text-gray-800 font-mono text-xs">{t.address.slice(0,8)}...{t.address.slice(-6)}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Market Cap</span><span className="text-green-600 font-bold">${t.marketCap.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Price</span><span className="text-gray-800 font-bold">{stats[t.address]?.priceUsd ? `$${stats[t.address].priceUsd.toFixed(6)}` : '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Liquidity</span><span className="text-gray-800">{stats[t.address]?.liquidityUsd ? `$${Math.round(stats[t.address].liquidityUsd).toLocaleString()}` : '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">FDV</span><span className="text-gray-800">{stats[t.address]?.fdv ? `$${Math.round(stats[t.address].fdv).toLocaleString()}` : '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Network</span><span className="text-gray-800">{stats[t.address]?.chainId ? stats[t.address].chainId : '—'}</span></div>
+                        {!stats[t.address]?.liquidityUsd && (<div className="text-xs text-yellow-700">No Base liquidity yet</div>)}
+                        {basescanKey && (<>
+                          <div className="flex justify-between"><span className="text-gray-600">Holders</span><span className="text-gray-800">{stats[t.address]?.holders ? stats[t.address].holders.toLocaleString() : '—'}</span></div>
+                          <div className="flex justify-between"><span className="text-gray-600">Total Supply</span><span className="text-gray-800">{stats[t.address]?.supply ? stats[t.address].supply : '—'}</span></div>
+                        </>)}
+                      </div>
                       <div className="mt-4 space-x-2">
                         <button onClick={() => share(t)} className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl">Share</button>
                         <button onClick={() => copyAddress(t.address)} className="px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-xl">Copy Address</button>
