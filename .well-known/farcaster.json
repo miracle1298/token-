@@ -2,11 +2,11 @@
   "miniapp": {
     "version": "1",
     "name": "Token Launcher",
-    "iconUrl": "/icon.svg",
-    "homeUrl": "/",
-    "imageUrl": "/preview.svg",
+    "iconUrl": "https://token-ten-pink.vercel.app/icon.svg",
+    "homeUrl": "https://token-ten-pink.vercel.app/",
+    "imageUrl": "https://token-ten-pink.vercel.app/preview.svg",
     "buttonTitle": "🚀 Launch Token",
-    "splashImageUrl": "/splash.svg",
+    "splashImageUrl": "https://token-ten-pink.vercel.app/splash.svg",
     "splashBackgroundColor": "#7c3aed"
   }
 }
