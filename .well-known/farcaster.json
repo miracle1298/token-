@@ -1,0 +1,13 @@
+{
+  "miniapp": {
+    "version": "1",
+    "name": "Token Launcher",
+    "iconUrl": "/icon.svg",
+    "homeUrl": "/",
+    "imageUrl": "/preview.svg",
+    "buttonTitle": "🚀 Launch Token",
+    "splashImageUrl": "/splash.svg",
+    "splashBackgroundColor": "#7c3aed"
+  }
+}
+

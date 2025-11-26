@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Launcher - Farcaster Mini App</title>
+  <meta name="description" content="Create your own token in seconds on Farcaster">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:image" content="/preview.svg">
+  <meta property="og:image" content="/preview.svg">
+  <meta property="og:title" content="Token Launcher">
+  <meta property="og:description" content="Create your own token in seconds">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  </style>
+  </head>
+<body>
+  <div id="root"></div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState } = React;
+    function TokenLauncher() {
+      const [step, setStep] = useState('form');
+      const [tokenName, setTokenName] = useState('');
+      const [ticker, setTicker] = useState('');
+      const [image, setImage] = useState(null);
+      const [imagePreview, setImagePreview] = useState(null);
+      const [launchedToken, setLaunchedToken] = useState(null);
+      const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          setImage(file);
+          const reader = new FileReader();
+          reader.onloadend = () => { setImagePreview(reader.result); };
+          reader.readAsDataURL(file);
+        }
+      };
+      const launchToken = async () => {
+        if (!tokenName || !ticker) { alert('Please enter token name and ticker'); return; }
+        setStep('launching');
+        setTimeout(() => {
+          const mockToken = {
+            name: tokenName,
+            ticker: ticker.toUpperCase(),
+            address: '0x' + Math.random().toString(16).slice(2).padEnd(40, '0'),
+            marketCap: Math.floor(Math.random() * 50000) + 10000,
+            image: imagePreview,
+            creatorFee: '40%'
+          };
+          setLaunchedToken(mockToken);
+          setStep('success');
+        }, 2500);
+      };
+      const reset = () => {
+        setStep('form');
+        setTokenName('');
+        setTicker('');
+        setImage(null);
+        setImagePreview(null);
+        setLaunchedToken(null);
+      };
+      const shareToken = () => {
+        const shareText = `🚀 Just launched ${launchedToken.ticker} on Farcaster!\n\nToken: ${launchedToken.name}\nMarket Cap: $${launchedToken.marketCap.toLocaleString()}\n\nCheck it out and start trading! 💰`;
+        const farcasterShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
+        try { window.open(farcasterShareUrl, '_blank'); }
+        catch (e) { navigator.clipboard.writeText(shareText).then(() => alert('Share text copied!')).catch(() => alert(`Copy: ${shareText}`)); }
+      };
+      if (step === 'launching') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-md w-full text-center">
+              <div className="flex justify-center mb-6">
+                <div className="animate-spin">
+                  <svg className="w-20 h-20 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Launching Token...</h2>
+              <p className="text-gray-600 mb-6">Deploying {ticker.toUpperCase()} to Base blockchain</p>
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-600 to-cyan-500 h-full rounded-full animate-pulse" style={{width: '70%'}}></div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      if (step === 'success') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
+              <div className="text-center mb-6">
+                <div className="flex justify-center mb-4">
+                  <div className="bg-green-100 rounded-full p-4">
+                    <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                  </div>
+                </div>
+                <h2 className="text-3xl font-bold text-gray-800 mb-2">Token Launched! 🎉</h2>
+                <p className="text-gray-600">Your token is now live on Base</p>
+              </div>
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 mb-6">
+                {launchedToken.image && <div className="flex justify-center mb-4"><img src={launchedToken.image} alt="Token" className="w-20 h-20 rounded-full border-4 border-white shadow-lg" /></div>}
+                <div className="text-center mb-4">
+                  <h3 className="text-2xl font-bold text-gray-800">{launchedToken.name}</h3>
+                  <p className="text-xl text-purple-600 font-bold">${launchedToken.ticker}</p>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center"><span className="text-gray-600">Contract:</span><span className="text-gray-800 font-mono text-xs">{launchedToken.address.slice(0, 8)}...{launchedToken.address.slice(-6)}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-gray-600">Market Cap:</span><span className="text-green-600 font-bold">${launchedToken.marketCap.toLocaleString()}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-gray-600">Your Creator Fee:</span><span className="text-purple-600 font-bold">{launchedToken.creatorFee}</span></div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <button onClick={shareToken} className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-4 rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all">Share on Farcaster</button>
+                <button onClick={reset} className="w-full bg-white border-2 border-purple-200 text-purple-700 font-bold py-4 rounded-xl hover:border-purple-300 transition-all">Launch Another Token</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
+            <div className="text-center mb-8">
+              <div className="flex justify-center mb-4">
+                <div className="bg-gradient-to-r from-purple-600 to-cyan-500 rounded-full p-4">
+                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">Token Launcher</h1>
+              <p className="text-gray-600">Create your token in seconds</p>
+            </div>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Token Name</label>
+                <input type="text" value={tokenName} onChange={(e) => setTokenName(e.target.value)} placeholder="e.g., Moon Rocket" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors text-gray-800" maxLength={30} />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Ticker Symbol</label>
+                <input type="text" value={ticker} onChange={(e) => setTicker(e.target.value.toUpperCase())} placeholder="e.g., MOON" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors text-gray-800 font-bold" maxLength={6} />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Token Image (Optional)</label>
+                <div className="relative">
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="image-upload" />
+                  <label htmlFor="image-upload" className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-500 cursor-pointer text-gray-600">Upload Image</label>
+                  {imagePreview && <div className="flex justify-center mt-4"><img src={imagePreview} alt="Token" className="w-24 h-24 rounded-full border-4 border-white shadow-lg" /></div>}
+                </div>
+              </div>
+              <button onClick={launchToken} className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-4 rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all">Launch Token</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<TokenLauncher />);
+  </script>
+</body>
+</html>
+
