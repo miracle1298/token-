@@ -1,6 +1,6 @@
 {
   "miniapp": {
-    "version": "1",
+    "version": 1,
     "name": "Token Launcher",
     "iconUrl": "https://token-ten-pink.vercel.app/icon.svg",
     "homeUrl": "https://token-ten-pink.vercel.app/",
