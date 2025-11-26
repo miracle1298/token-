@@ -35,6 +35,7 @@
       const [launchedToken, setLaunchedToken] = useState(null);
       const [tokens, setTokens] = useState([]);
       const [stats, setStats] = useState({});
+      const [searchData, setSearchData] = useState(null);
       const [account, setAccount] = useState('');
       const [chain, setChain] = useState('');
       const [claiming, setClaiming] = useState({});
@@ -141,7 +142,6 @@
             creatorFee: '40%'
           };
           setLaunchedToken(mockToken);
-          setTokens(prev => [...prev, mockToken]);
           setStep('success');
         }, 2500);
       };
@@ -257,6 +257,32 @@
           const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
           try { window.open(url, '_blank'); } catch (e) { navigator.clipboard.writeText(shareText).then(() => alert('Share text copied')).catch(() => alert(shareText)); }
         };
+        const searchByAddress = async () => {
+          const input = document.getElementById('add-address-input');
+          const addr = (input?.value || '').trim();
+          if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) { alert('Enter a valid 0x contract address'); return; }
+          try {
+            const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addr}`);
+            const data = await res.json();
+            const pairs = Array.isArray(data?.pairs) ? data.pairs : [];
+            const basePairs = pairs.filter(p => (p?.chainId === 'base' || (p?.chainSymbol && p.chainSymbol.toUpperCase() === 'BASE')));
+            const sorted = basePairs.sort((a,b)=>((b?.liquidity?.usd||0)-(a?.liquidity?.usd||0)));
+            const best = sorted[0];
+            if (!best) { setSearchData({ address: addr }); return; }
+            setSearchData({
+              address: addr,
+              name: 'Token',
+              ticker: 'TOKEN',
+              priceUsd: best.priceUsd ? parseFloat(best.priceUsd) : null,
+              fdv: best.fdv ?? null,
+              liquidityUsd: best?.liquidity?.usd ?? null,
+              url: best.url ?? null,
+              chainId: best.chainId ?? 'base'
+            });
+          } catch {
+            setSearchData({ address: addr });
+          }
+        };
         const addByAddress = async () => {
           const input = document.getElementById('add-address-input');
           const addr = (input?.value || '').trim();
@@ -273,6 +299,7 @@
           const newToken = { name: 'Custom Token', ticker: 'TOKEN', address: addr, marketCap: 0, image: null, creatorFee: '0%' };
           setTokens(prev => [...prev, newToken]);
           if (input) input.value = '';
+          setSearchData(null);
         };
         const removeToken = (addr) => {
           setTokens(prev => prev.filter(t => t.address.toLowerCase() !== addr.toLowerCase()));
@@ -291,8 +318,25 @@
               </div>
               <div className="flex items-center gap-2 mb-6">
                 <input id="add-address-input" type="text" placeholder="0x... contract address" className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors text-gray-800" />
+                <button onClick={searchByAddress} className="px-4 py-3 bg-white border-2 border-blue-200 text-blue-700 rounded-xl">Search</button>
                 <button onClick={addByAddress} className="px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl">Add</button>
               </div>
+              {searchData && (
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 shadow mb-6">
+                  <div className="text-lg font-bold text-gray-800 mb-2">Search Result</div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-gray-600">Contract</span><span className="text-gray-800 font-mono text-xs">{searchData.address.slice(0,8)}...{searchData.address.slice(-6)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Price</span><span className="text-gray-800 font-bold">{searchData.priceUsd ? `$${searchData.priceUsd.toFixed(6)}` : '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Liquidity</span><span className="text-gray-800">{searchData.liquidityUsd ? `$${Math.round(searchData.liquidityUsd).toLocaleString()}` : '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">FDV</span><span className="text-gray-800">{searchData.fdv ? `$${Math.round(searchData.fdv).toLocaleString()}` : '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Network</span><span className="text-gray-800">{searchData.chainId || '—'}</span></div>
+                  </div>
+                  <div className="mt-4 space-x-2">
+                    {searchData.url && (<a href={searchData.url} target="_blank" rel="noreferrer" className="px-3 py-2 bg-white border-2 border-blue-200 text-blue-700 rounded-xl">Chart</a>)}
+                    <button onClick={addByAddress} className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl">Add to Dashboard</button>
+                  </div>
+                </div>
+              )}
               {tokens.length === 0 ? (
                 <div className="text-center text-gray-600">No tokens yet</div>
               ) : (
