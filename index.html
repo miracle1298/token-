@@ -24,6 +24,7 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://unpkg.com/browser-solc@0.6.1/browser-solc.min.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
     function TokenLauncher() {
@@ -132,19 +133,28 @@
       const launchToken = async () => {
         if (!tokenName || !ticker) { alert('Please enter token name and ticker'); return; }
         setStep('launching');
-        setTimeout(() => {
-          const mockToken = {
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const net = await provider.getNetwork();
+          if (net.chainId !== 8453) {
+            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+          }
+          const deployed = await deployRealToken(tokenName, ticker.toUpperCase());
+          const liveToken = {
             name: tokenName,
             ticker: ticker.toUpperCase(),
-            address: '0x' + Math.random().toString(16).slice(2).padEnd(40, '0'),
+            address: deployed.address,
             marketCap: Math.floor(Math.random() * 50000) + 10000,
             image: imagePreview,
-            creatorFee: '40%'
+            creatorFee: '0%'
           };
-          setLaunchedToken(mockToken);
-          setTokens(prev => [...prev, mockToken]);
+          setLaunchedToken(liveToken);
+          setTokens(prev => [...prev, liveToken]);
           setStep('success');
-        }, 2500);
+        } catch (e) {
+          alert('Deployment failed');
+          setStep('form');
+        }
       };
       const reset = () => {
         setStep('form');
@@ -429,3 +439,23 @@
 </body>
 </html>
 
+      const deployRealToken = async (n, s) => {
+        const version = 'soljson-v0.8.21+commit.d9974d57.js';
+        const src = `pragma solidity ^0.8.21;\ncontract ERC20Basic {\nstring public name; string public symbol; uint8 public decimals = 18; uint256 public totalSupply; mapping(address=>uint256) public balanceOf; event Transfer(address indexed from,address indexed to,uint256 value);\nconstructor(string memory n,string memory s,uint256 initialSupply){ name=n; symbol=s; totalSupply=initialSupply; balanceOf[msg.sender]=initialSupply; emit Transfer(address(0), msg.sender, initialSupply);}\nfunction transfer(address to,uint256 value) public returns(bool){ require(balanceOf[msg.sender]>=value, \'balance\'); balanceOf[msg.sender]-=value; balanceOf[to]+=value; emit Transfer(msg.sender,to,value); return true; }\n}`;
+        const compiler = await new Promise((resolve, reject) => {
+          try { window.browserSolc.loadVersion(version, c => resolve(c)); } catch (e) { reject(e); }
+        });
+        const input = { language: 'Solidity', sources: { 'Token.sol': { content: src } }, settings: { outputSelection: { '*': { '*': ['abi', 'evm.bytecode'] } } } };
+        const output = JSON.parse(compiler.compile(JSON.stringify(input)));
+        const contractOut = output?.contracts?.['Token.sol']?.['ERC20Basic'];
+        if (!contractOut) throw new Error('Compile failed');
+        const abi = contractOut.abi;
+        const bytecode = '0x' + contractOut.evm.bytecode.object;
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const factory = new ethers.ContractFactory(abi, bytecode, signer);
+        const initialSupply = ethers.utils.parseUnits('1000000', 18);
+        const contract = await factory.deploy(n, s, initialSupply);
+        const receipt = await contract.deployTransaction.wait();
+        return { address: contract.address, txHash: receipt.transactionHash };
+      };
