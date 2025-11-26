@@ -142,6 +142,7 @@
             creatorFee: '40%'
           };
           setLaunchedToken(mockToken);
+          setTokens(prev => [...prev, mockToken]);
           setStep('success');
         }, 2500);
       };
