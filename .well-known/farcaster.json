@@ -2,11 +2,11 @@
   "miniapp": {
     "version": "1",
     "name": "Token Launcher",
-    "iconUrl": "https://token-ten-pink.vercel.app/icon.svg",
-    "homeUrl": "https://token-ten-pink.vercel.app/",
-    "imageUrl": "https://token-ten-pink.vercel.app/preview.svg",
+    "iconUrl": "https://token-git-main-miracle1298s-projects.vercel.app/icon.svg",
+    "homeUrl": "https://token-git-main-miracle1298s-projects.vercel.app/",
+    "imageUrl": "https://token-git-main-miracle1298s-projects.vercel.app/preview.svg",
     "buttonTitle": "🚀 Launch Token",
-    "splashImageUrl": "https://token-ten-pink.vercel.app/splash.svg",
+    "splashImageUrl": "https://token-git-main-miracle1298s-projects.vercel.app/splash.svg",
     "splashBackgroundColor": "#7c3aed"
   }
 }
