@@ -1,0 +1,15 @@
+{
+  "rewrites": [
+    { "source": "/.well-known/farcaster.json", "destination": "/.well-known/farcaster.json" },
+    { "source": "/(.*)", "destination": "/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/.well-known/farcaster.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "max-age=0" },
+        { "key": "Content-Type", "value": "application/json" }
+      ]
+    }
+  ]
+}
