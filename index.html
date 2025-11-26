@@ -44,6 +44,27 @@
         } catch {}
       }, []);
       useEffect(() => {
+        async function autoConnect() {
+          try {
+            if (!window.ethereum || !ethers) return;
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            try {
+              const accounts = await provider.listAccounts();
+              if (!accounts || accounts.length === 0) {
+                await provider.send('eth_requestAccounts', []);
+              }
+            } catch {}
+            try {
+              const network = await provider.getNetwork();
+              if (network.chainId !== 8453) {
+                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+              }
+            } catch {}
+          } catch {}
+        }
+        autoConnect();
+      }, []);
+      useEffect(() => {
         try {
           localStorage.setItem('launchedTokens', JSON.stringify(tokens));
         } catch {}
