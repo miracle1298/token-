@@ -33,6 +33,7 @@
       const [imagePreview, setImagePreview] = useState(null);
       const [launchedToken, setLaunchedToken] = useState(null);
       const [tokens, setTokens] = useState([]);
+      const [stats, setStats] = useState({});
       useEffect(() => {
         try {
           const raw = localStorage.getItem('launchedTokens');
@@ -44,6 +45,35 @@
           localStorage.setItem('launchedTokens', JSON.stringify(tokens));
         } catch {}
       }, [tokens]);
+
+      useEffect(() => {
+        async function load() {
+          const list = tokens || [];
+          const adds = list.map(t => t.address);
+          const tasks = adds.map(async (addr) => {
+            try {
+              const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addr}`);
+              const data = await res.json();
+              const pairs = Array.isArray(data?.pairs) ? data.pairs : [];
+              const best = pairs.sort((a,b)=>((b?.liquidity?.usd||0)-(a?.liquidity?.usd||0)))[0];
+              if (best) {
+                setStats(prev => ({...prev, [addr]: {
+                  priceUsd: best.priceUsd ? parseFloat(best.priceUsd) : null,
+                  fdv: best.fdv ?? null,
+                  liquidityUsd: best?.liquidity?.usd ?? null,
+                  url: best.url ?? null
+                }}));
+              } else {
+                setStats(prev => ({...prev, [addr]: {}}));
+              }
+            } catch {
+              setStats(prev => ({...prev, [addr]: {}}));
+            }
+          });
+          await Promise.all(tasks);
+        }
+        if (step === 'dashboard') load();
+      }, [step, tokens]);
       const handleImageUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -175,10 +205,14 @@
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between"><span className="text-gray-600">Contract</span><span className="text-gray-800 font-mono text-xs">{t.address.slice(0,8)}...{t.address.slice(-6)}</span></div>
                         <div className="flex justify-between"><span className="text-gray-600">Market Cap</span><span className="text-green-600 font-bold">${t.marketCap.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Price</span><span className="text-gray-800 font-bold">{stats[t.address]?.priceUsd ? `$${stats[t.address].priceUsd.toFixed(6)}` : '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">Liquidity</span><span className="text-gray-800">{stats[t.address]?.liquidityUsd ? `$${Math.round(stats[t.address].liquidityUsd).toLocaleString()}` : '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-600">FDV</span><span className="text-gray-800">{stats[t.address]?.fdv ? `$${Math.round(stats[t.address].fdv).toLocaleString()}` : '—'}</span></div>
                       </div>
                       <div className="mt-4 space-x-2">
                         <button onClick={() => share(t)} className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl">Share</button>
                         <button onClick={() => copyAddress(t.address)} className="px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-xl">Copy Address</button>
+                        {stats[t.address]?.url && (<a href={stats[t.address].url} target="_blank" rel="noreferrer" className="px-3 py-2 bg-white border-2 border-blue-200 text-blue-700 rounded-xl">Chart</a>)}
                       </div>
                     </div>
                   ))}
