@@ -41,10 +41,17 @@
       const [chain, setChain] = useState('');
       const [claiming, setClaiming] = useState({});
       const [claimed, setClaimed] = useState({});
+      const [initialCA, setInitialCA] = useState('');
       useEffect(() => {
         try {
           const raw = localStorage.getItem('launchedTokens');
           if (raw) setTokens(JSON.parse(raw));
+          const params = new URLSearchParams(window.location.search);
+          const ca = params.get('ca');
+          if (ca && /^0x[0-9a-fA-F]{40}$/.test(ca)) {
+            setInitialCA(ca);
+            setStep('dashboard');
+          }
         } catch {}
       }, []);
       useEffect(() => {
@@ -121,6 +128,35 @@
           return () => clearInterval(id);
         }
       }, [step, tokens]);
+      useEffect(() => {
+        async function preloadCA() {
+          if (!initialCA || step !== 'dashboard') return;
+          try {
+            const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${initialCA}`);
+            const data = await res.json();
+            const pairs = Array.isArray(data?.pairs) ? data.pairs : [];
+            const basePairs = pairs.filter(p => (p?.chainId === 'base' || (p?.chainSymbol && p.chainSymbol.toUpperCase() === 'BASE')));
+            const sorted = basePairs.sort((a,b)=>((b?.liquidity?.usd||0)-(a?.liquidity?.usd||0)));
+            const best = sorted[0];
+            const input = document.getElementById('add-address-input');
+            if (input) input.value = initialCA;
+            if (!best) { setSearchData({ address: initialCA }); return; }
+            setSearchData({
+              address: initialCA,
+              name: 'Token',
+              ticker: 'TOKEN',
+              priceUsd: best.priceUsd ? parseFloat(best.priceUsd) : null,
+              fdv: best.fdv ?? null,
+              liquidityUsd: best?.liquidity?.usd ?? null,
+              url: best.url ?? null,
+              chainId: best.chainId ?? 'base'
+            });
+          } catch {
+            setSearchData({ address: initialCA });
+          }
+        }
+        preloadCA();
+      }, [step, initialCA]);
       const handleImageUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
