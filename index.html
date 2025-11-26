@@ -23,6 +23,7 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
     function TokenLauncher() {
@@ -34,6 +35,8 @@
       const [launchedToken, setLaunchedToken] = useState(null);
       const [tokens, setTokens] = useState([]);
       const [stats, setStats] = useState({});
+      const [claiming, setClaiming] = useState({});
+      const [claimed, setClaimed] = useState({});
       useEffect(() => {
         try {
           const raw = localStorage.getItem('launchedTokens');
@@ -121,6 +124,42 @@
         try { window.open(farcasterShareUrl, '_blank'); }
         catch (e) { navigator.clipboard.writeText(shareText).then(() => alert('Share text copied!')).catch(() => alert(`Copy: ${shareText}`)); }
       };
+      const claimFees = async (addr) => {
+        try {
+          if (!window.ethereum || !ethers) { alert('Please install a wallet to claim'); return; }
+          setClaiming(prev => ({...prev, [addr]: true}));
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          await provider.send('eth_requestAccounts', []);
+          const network = await provider.getNetwork();
+          if (network.chainId !== 8453) {
+            try {
+              await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+            } catch (e) {
+              alert('Switch your wallet to Base');
+              setClaiming(prev => ({...prev, [addr]: false}));
+              return;
+            }
+          }
+          const signer = provider.getSigner();
+          const abi1 = [ 'function claimCreatorFees()' ];
+          const abi2 = [ 'function claimFees()' ];
+          let tx;
+          try {
+            const c1 = new ethers.Contract(addr, abi1, signer);
+            tx = await c1.claimCreatorFees();
+          } catch (e1) {
+            const c2 = new ethers.Contract(addr, abi2, signer);
+            tx = await c2.claimFees();
+          }
+          const receipt = await tx.wait();
+          setClaimed(prev => ({...prev, [addr]: receipt.transactionHash}));
+          alert('Creator fees claimed');
+        } catch (e) {
+          alert('Unable to claim fees');
+        } finally {
+          setClaiming(prev => ({...prev, [addr]: false}));
+        }
+      };
       if (step === 'launching') {
         return (
           <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 flex items-center justify-center p-4">
@@ -168,6 +207,7 @@
                 <button onClick={shareToken} className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-4 rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all">Share on Farcaster</button>
                 <button onClick={reset} className="w-full bg-white border-2 border-purple-200 text-purple-700 font-bold py-4 rounded-xl hover:border-purple-300 transition-all">Launch Another Token</button>
                 <button onClick={() => setStep('dashboard')} className="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white font-bold py-4 rounded-xl hover:from-green-700 hover:to-teal-700 transition-all">View Dashboard</button>
+                <button disabled={claiming[launchedToken?.address]} onClick={() => claimFees(launchedToken.address)} className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold py-4 rounded-xl hover:from-orange-700 hover:to-red-700 transition-all">Claim Creator Fees</button>
               </div>
             </div>
           </div>
@@ -246,6 +286,7 @@
                         <button onClick={() => share(t)} className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl">Share</button>
                         <button onClick={() => copyAddress(t.address)} className="px-3 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-xl">Copy Address</button>
                         {stats[t.address]?.url && (<a href={stats[t.address].url} target="_blank" rel="noreferrer" className="px-3 py-2 bg-white border-2 border-blue-200 text-blue-700 rounded-xl">Chart</a>)}
+                        <button disabled={claiming[t.address]} onClick={() => claimFees(t.address)} className="px-3 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl">Claim Fees</button>
                         <button onClick={() => removeToken(t.address)} className="px-3 py-2 bg-white border-2 border-red-200 text-red-600 rounded-xl">Remove</button>
                       </div>
                     </div>
