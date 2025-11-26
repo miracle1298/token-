@@ -157,7 +157,7 @@
       const shareToken = () => {
         const appLink = `https://token-ten-pink.vercel.app/?ca=${launchedToken.address}`;
         const shareText = `🚀 Just launched ${launchedToken.ticker} on Farcaster!\n\nToken: ${launchedToken.name}\nMarket Cap: $${launchedToken.marketCap.toLocaleString()}\n\nOpen in Token Launcher: ${appLink}`;
-        const farcasterShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
+        const farcasterShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appLink)}`;
         try { window.open(farcasterShareUrl, '_blank'); }
         catch (e) { navigator.clipboard.writeText(shareText).then(() => alert('Share text copied!')).catch(() => alert(`Copy: ${shareText}`)); }
       };
@@ -257,7 +257,7 @@
         const share = (t) => {
           const appLink = `https://token-ten-pink.vercel.app/?ca=${t.address}`;
           const shareText = `🚀 Just launched ${t.ticker} on Farcaster!\n\nToken: ${t.name}\nMarket Cap: $${t.marketCap.toLocaleString()}\n\nOpen in Token Launcher: ${appLink}`;
-          const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
+          const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appLink)}`;
           try { window.open(url, '_blank'); } catch (e) { navigator.clipboard.writeText(shareText).then(() => alert('Share text copied')).catch(() => alert(shareText)); }
         };
         const searchByAddress = async () => {
