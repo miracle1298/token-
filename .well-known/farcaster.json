@@ -1,4 +1,9 @@
 {
+  "accountAssociation": {
+    "header": "eyJmaWQiOjIzMjc5OCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweGRkNmJFYUVGYTg1NjQ4NWY5RkRkNGM5NjljYjEyNmI1RjUyNWZEMTEifQ",
+    "payload": "eyJkb21haW4iOiJ0b2tlbi10ZW4tcGluay52ZXJjZWwuYXBwIn0",
+    "signature": "1ViHOZxFCdJEbzqL2FkStVPHDpWssZ5P9GfrSk6xdPUhbsaJQlF/7xCcx0aW/envLE8wytsg/Cev5tmvNtGowxs="
+  },
   "miniapp": {
     "version": "1",
     "name": "Token Launcher",
